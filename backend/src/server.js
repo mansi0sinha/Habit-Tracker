@@ -1,23 +1,20 @@
-import express from "express";
+import express from 'express';
 import dotenv from "dotenv";
-import cors from "cors";
-
 dotenv.config();
-
 const app = express();
-
-app.use(cors());
+const port=process.env.PORT;
 app.use(express.json());
-
-app.get("/api/health", (req, res) => {
-  res.json({
-    success: true,
-    message: "Habit Tracker API is running",
-  });
+app.post('/api/test',(req,res)=>{
+console.log(req.body);
+res.json({
+  message:"data received",
+  data:req.body
+})
 });
+app.get('/api/health', (req, res) => {
+  res.send("Habit Tracker API is running");
+});
+app.listen(port, () => {
 
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server running on port ${port}`);
 });
