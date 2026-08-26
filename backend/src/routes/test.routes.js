@@ -1,10 +1,12 @@
 import express from 'express';
-const router=express.Router();
-router.post('/test-user',(req,res)=>{
-    res.send({
-         email: req.body.email,
-    password: req.body.password,
-    timezone: req.body.timezone
+import User from "../models/User.js";
+const router = express.Router();
+router.post('/test-user', async (req, res) => {
+    const user = await User.create({
+        email: req.body.email,
+        password: req.body.password,
+        timezone: req.body.timezone
     });
+    res.send(user);
 });
 export default router;
