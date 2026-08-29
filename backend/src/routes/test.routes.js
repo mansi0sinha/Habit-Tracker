@@ -1,7 +1,7 @@
 import express from 'express';
 import User from "../models/User.js";
 const router = express.Router();
-
+//Routing
 router.post('/test-user', async (req, res) => {
     const user = await User.create({
         email: req.body.email,
