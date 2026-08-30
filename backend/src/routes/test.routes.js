@@ -1,13 +1,6 @@
 import express from 'express';
-import User from "../models/User.js";
+import {registerUser} from "../controllers/auth.controller.js"
 const router = express.Router();
 //Routing
-router.post('/test-user', async (req, res) => {
-    const user = await User.create({
-        email: req.body.email,
-        password: req.body.password,
-        timezone: req.body.timezone
-    });
-    res.send(user);
-});
+router.post('/test-user',registerUser);
 export default router;
