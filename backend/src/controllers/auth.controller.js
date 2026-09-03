@@ -1,5 +1,6 @@
 import User from "../models/User.js";
 import { registerSchema } from "../validators/auth.validator.js";
+import bcrypt from "bcrypt";
 export const registerUser = async (req, res) => {
     try {
         const result = registerSchema.safeParse(req.body);
@@ -10,12 +11,21 @@ export const registerUser = async (req, res) => {
             })
 
         }
+        const hashedPassword = await bcrypt.hash(result.data.password, 10);
         const user = await User.create({
             email: result.data.email,
-            password: result.data.password,
+            password: hashedPassword,
             timezone: result.data.timezone
         });
-        res.send(user);
+
+        res.status(201).json({
+            message: "User registered successfully",
+            user: {
+                id: user._id,
+                email: user.email,
+                timezone: user.timezone
+            }
+        });
     } catch (error) {
         console.log(error);
         res.status(500).json({
