@@ -34,3 +34,20 @@ export const createHabit = async (req, res) => {
         });
     }
 };
+export const getHabits = async (req, res) => {
+    try {
+        const result = await Habit.find({ owner: req.user });
+
+        return res.status(200).json({
+            habits: result
+        });
+
+    } catch (error) {
+        console.log(error);
+
+        return res.status(500).json({
+            message: "Error occurred",
+            error: error.message
+        });
+    }
+};
