@@ -1,8 +1,10 @@
 import express from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";
-import { createHabit, getHabits } from "../controllers/habit.controller.js";
+import { createHabit, getHabits,deleteHabit,createCheckIn,getHabitStats } from "../controllers/habit.controller.js";
 const router=express.Router();
 router.post('/',authMiddleware,createHabit);
 router.get('/', authMiddleware, getHabits);
-
+router.delete('/:id',authMiddleware,deleteHabit);
+router.post('/:id/checkin',authMiddleware,createCheckIn);
+router.get("/:id/stats", authMiddleware, getHabitStats);
 export default router;
