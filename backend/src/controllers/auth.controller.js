@@ -19,7 +19,7 @@ export const registerUser = async (req, res) => {
             timezone: result.data.timezone
         });
 
-        res.status(201).json({
+      return  res.status(201).json({
             message: "User registered successfully",
             user: {
                 id: user._id,
