@@ -19,8 +19,15 @@ export const registerUser = async (req, res) => {
             timezone: result.data.timezone
         });
 
-      return  res.status(201).json({
+        const token = jwt.sign(
+            { userId: user._id },
+            process.env.JWT_SECRET,
+            { expiresIn: "7d" }
+        );
+
+        return res.status(201).json({
             message: "User registered successfully",
+            token,
             user: {
                 id: user._id,
                 email: user.email,
@@ -71,7 +78,12 @@ export const loginUser = async (req, res) => {
             )
             return res.status(200).json({
                 message: "Login successful",
-                token: token
+                token,
+                user: {
+                    id: user._id,
+                    email: user.email,
+                    timezone: user.timezone
+                }
             });
         }
     } catch (error) {
