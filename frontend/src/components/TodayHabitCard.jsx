@@ -1,4 +1,4 @@
-import { Check, Flame, Pencil, Trash2, Archive } from "lucide-react";
+import { Check, Flame, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -9,29 +9,39 @@ export default function TodayHabitCard({
   streak = 0,
   onEdit,
   onDelete,
-  onArchive,
 }) {
   const [menu, setMenu] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
+
   const triggerRef = useRef(null);
-  const menuWidth = 160; // matches w-40
-  const menuHeight = 132; // approx for 3 items
+
+  const menuWidth = 160;
+  const menuHeight = 92; // Edit + Delete
 
   useLayoutEffect(() => {
     if (!menu || !triggerRef.current) return;
+
     const rect = triggerRef.current.getBoundingClientRect();
-    const flipUp = rect.bottom + menuHeight + 8 > window.innerHeight;
+
+    const flipUp =
+      rect.bottom + menuHeight + 8 > window.innerHeight;
+
     setPos({
-      top: flipUp ? rect.top - menuHeight - 4 : rect.bottom + 4,
+      top: flipUp
+        ? rect.top - menuHeight - 4
+        : rect.bottom + 4,
       left: rect.right - menuWidth,
     });
   }, [menu]);
 
   useEffect(() => {
     if (!menu) return;
+
     const close = () => setMenu(false);
+
     window.addEventListener("scroll", close, true);
     window.addEventListener("resize", close);
+
     return () => {
       window.removeEventListener("scroll", close, true);
       window.removeEventListener("resize", close);
@@ -40,23 +50,37 @@ export default function TodayHabitCard({
 
   return (
     <div
-      className={`card p-4 flex items-center gap-4 transition ${completed
-        ? "ring-1 ring-brand-500/10 bg-brand-500/5 dark:bg-brand-500/3"
-        : ""
-        }`}
+      className={`card p-4 flex items-center gap-4 transition ${
+        completed
+          ? "ring-1 ring-brand-500/10 bg-brand-500/5 dark:bg-brand-500/3"
+          : ""
+      }`}
     >
+      {/* Habit icon */}
       <div
         className="w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0"
-        style={{ background: `${habit.color}26`, color: habit.color }}
+        style={{
+          background: `${habit.color || "#6366f1"}26`,
+          color: habit.color || "#6366f1",
+        }}
       >
-        {habit.icon}
+        {habit.icon || "🎯"}
       </div>
 
+      {/* Habit information */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <div className="font-medium truncate">{habit.name}</div>
-          <span className="chip">{habit.category}</span>
+          <div className="font-medium truncate">
+            {habit.name}
+          </div>
+
+          {habit.category && (
+            <span className="chip">
+              {habit.category}
+            </span>
+          )}
         </div>
+
         {habit.description && (
           <div className="text-sm text-muted truncate mt-0.5">
             {habit.description}
@@ -64,14 +88,23 @@ export default function TodayHabitCard({
         )}
       </div>
 
+      {/* Streak */}
       <div className="hidden sm:flex items-center gap-1 text-sm text-soft">
         <Flame
           size={16}
-          className={streak > 0 ? "text-orange-500" : "text-faint"}
+          className={
+            streak > 0
+              ? "text-orange-500"
+              : "text-faint"
+          }
         />
-        <span className="font-medium">{streak}</span>
+
+        <span className="font-medium">
+          {streak}
+        </span>
       </div>
 
+      {/* Options */}
       <div className="relative">
         <button
           ref={triggerRef}
@@ -79,7 +112,12 @@ export default function TodayHabitCard({
           onClick={() => setMenu((m) => !m)}
           aria-label="Habit options"
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="currentColor"
+          >
             <circle cx="3" cy="8" r="1.5" />
             <circle cx="8" cy="8" r="1.5" />
             <circle cx="13" cy="8" r="1.5" />
@@ -89,14 +127,21 @@ export default function TodayHabitCard({
         {menu &&
           createPortal(
             <>
+              {/* Overlay */}
               <div
                 className="fixed inset-0 z-[100]"
                 onClick={() => setMenu(false)}
               />
+
+              {/* Menu */}
               <div
                 className="fixed z-[110] glass-strong rounded-xl py-1 w-40 shadow-xl animate-fade-in"
-                style={{ top: pos.top, left: pos.left }}
+                style={{
+                  top: pos.top,
+                  left: pos.left,
+                }}
               >
+                {/* Edit */}
                 <button
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm text-soft hover:bg-[var(--surface-hover)]"
                   onClick={() => {
@@ -104,18 +149,11 @@ export default function TodayHabitCard({
                     onEdit();
                   }}
                 >
-                  <Pencil size={14} /> Edit
+                  <Pencil size={14} />
+                  Edit
                 </button>
-                <button
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-soft hover:bg-[var(--surface-hover)]"
-                  onClick={() => {
-                    setMenu(false);
-                    onArchive();
-                  }}
-                >
-                  <Archive size={14} />
-                  {habit.isArchived ? "Unarchive" : "Archive"}
-                </button>
+
+                {/* Delete */}
                 <button
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm text-rose-500 hover:bg-rose-500/10"
                   onClick={() => {
@@ -123,7 +161,8 @@ export default function TodayHabitCard({
                     onDelete();
                   }}
                 >
-                  <Trash2 size={14} /> Delete
+                  <Trash2 size={14} />
+                  Delete
                 </button>
               </div>
             </>,
@@ -131,13 +170,19 @@ export default function TodayHabitCard({
           )}
       </div>
 
+      {/* Check-in button */}
       <button
         onClick={onToggle}
-        className={`shrink-0 w-11 h-11 rounded-full flex items-center justify-center transition ${completed
-          ? "bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-lg shadow-brand-500/40 animate-pop"
-          : "bg-brand-100 border-2 border-border-brand-400 text-brand-400 hover:border-brand-400 hover:text-brand-400"
-          }`}
-        aria-label={completed ? "Mark incomplete" : "Mark complete"}
+        className={`shrink-0 w-11 h-11 rounded-full flex items-center justify-center transition ${
+          completed
+            ? "bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-lg shadow-brand-500/40 animate-pop"
+            : "bg-brand-100 border-2 border-border-brand-400 text-brand-400 hover:border-brand-400 hover:text-brand-400"
+        }`}
+        aria-label={
+          completed
+            ? "Mark incomplete"
+            : "Mark complete"
+        }
       >
         <Check size={20} strokeWidth={3} />
       </button>

@@ -79,14 +79,14 @@ export default function Sidebar() {
       <div className="p-3 border-t divider space-y-1">
         <button
           onClick={toggle}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-soft hover:bg-[var(--surface-hover)] transition"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-soft hover:bg-(--surface-hover) transition"
         >
           {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
           {theme === "dark" ? "Light mode" : "Dark mode"}
         </button>
 
         <button
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-soft hover:bg-[var(--surface-hover)] transition"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-soft hover:bg-(--surface-hover) transition"
           onClick={() => setSettingsOpen(true)}
         >
           <Settings size={18} />
@@ -94,7 +94,7 @@ export default function Sidebar() {
         </button>
 
         <div className="px-2 py-2 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-white font-semibold flex items-center justify-center shadow-md shadow-brand-500/30">
+          <div className="w-9 h-9 rounded-full bg-linear-to-br from-brand-500 to-brand-700 text-white font-semibold flex items-center justify-center shadow-md shadow-brand-500/30">
             {user?.avatar || user?.name?.charAt(0).toUpperCase() || "U"}
           </div>
           <div className="flex-1 min-w-0">
@@ -104,7 +104,7 @@ export default function Sidebar() {
           <button
             onClick={logout}
             title="Log out"
-            className="p-2 rounded-lg text-soft hover:bg-[var(--surface-hover)]"
+            className="p-2 rounded-lg text-soft hover:bg-(--surface-hover)"
           >
             <LogOut size={16} />
           </button>
@@ -126,7 +126,7 @@ export default function Sidebar() {
             />
           </div>
 
-          <label className="flex items-start gap-3 p-3 rounded-xl glass cursor-pointer hover:bg-[var(--surface-hover)]">
+          <label className="flex items-start gap-3 p-3 rounded-xl glass cursor-pointer hover:bg-(--surface-hover)">
             <input
               type="checkbox"
               checked={morning}
