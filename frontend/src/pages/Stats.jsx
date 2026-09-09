@@ -1,179 +1,432 @@
 import { useEffect, useMemo, useState } from "react";
-import { format, parseISO, subDays } from "date-fns";
+import { format, subDays } from "date-fns";
+import { Trophy, Flame, TrendingDown } from "lucide-react";
+
 import api from "../api/axios.js";
 import HabitStatsCard from "../components/HabitStatsCard.jsx";
 import WeeklyBarChart from "../components/WeeklyBarChart.jsx";
 import MonthlyBarChart from "../components/MonthlyBarChart.jsx";
 import CategoryPieChart from "../components/CategoryPieChart.jsx";
-import AIChat from "../components/AIChat.jsx";
 import LoadingSpinner from "../components/LoadingSpinner.jsx";
-import { Trophy, Flame, TrendingDown } from "lucide-react";
+
+const getLocalDate = (date = new Date()) =>
+  new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
 
 export default function Stats() {
-  const [stats, setStats] = useState(null);
   const [habits, setHabits] = useState([]);
-  const [logs, setLogs] = useState([]);
+  const [checkIns, setCheckIns] = useState([]);
+  const [statsByHabit, setStatsByHabit] = useState({});
   const [loading, setLoading] = useState(true);
 
+  // =========================
+  // LOAD DATA
+  // =========================
   useEffect(() => {
-    (async () => {
+    const load = async () => {
       setLoading(true);
+
       try {
-        const [statsRes, habitsRes] = await Promise.all([
-          api.get("/logs/stats"),
-          api.get("/habits"),
-        ]);
-        setStats(statsRes.data);
-        setHabits(habitsRes.data);
         const end = new Date();
-        const start = subDays(end, 29);
-        const rangeRes = await api.get("/logs/range", {
-          params: {
-            start: format(start, "yyyy-MM-dd"),
-            end: format(end, "yyyy-MM-dd"),
-          },
-        });
-        setLogs(rangeRes.data);
+        const start = subDays(end, 89);
+
+        const [habitsRes, checkInsRes] = await Promise.all([
+          api.get("/habits"),
+
+          api.get("/habits/checkins", {
+            params: {
+              start: getLocalDate(start),
+              end: getLocalDate(end),
+            },
+          }),
+        ]);
+
+        const habitList = habitsRes.data.habits || [];
+
+        const checkInList =
+          checkInsRes.data.checkIns || [];
+
+        setHabits(habitList);
+        setCheckIns(checkInList);
+
+        // =========================
+        // LOAD STATS FOR EACH HABIT
+        // =========================
+        const entries = await Promise.all(
+          habitList.map(async (habit) => {
+            try {
+              const res = await api.get(
+                `/habits/${habit._id}/stats`
+              );
+
+              return [
+                habit._id,
+                {
+                  currentStreak:
+                    res.data.currentStreak || 0,
+
+                  longestStreak:
+                    res.data.longestStreak || 0,
+                },
+              ];
+            } catch (error) {
+              console.error(
+                `Failed to load stats for ${habit.name}:`,
+                error
+              );
+
+              return [
+                habit._id,
+                {
+                  currentStreak: 0,
+                  longestStreak: 0,
+                },
+              ];
+            }
+          })
+        );
+
+        setStatsByHabit(
+          Object.fromEntries(entries)
+        );
+      } catch (error) {
+        console.error(
+          "Failed to load statistics:",
+          error
+        );
       } finally {
         setLoading(false);
       }
-    })();
+    };
+
+    load();
   }, []);
 
+  // =========================
+  // LAST 30 DAYS
+  // =========================
   const monthly = useMemo(() => {
-    const end = new Date();
-    const byDate = {};
-    for (let i = 29; i >= 0; i--) {
-      const d = subDays(end, i);
-      const key = format(d, "yyyy-MM-dd");
-      byDate[key] = 0;
-    }
-    for (const l of logs) {
-      if (byDate[l.completedDate] !== undefined)
-        byDate[l.completedDate] += 1;
-    }
-    return Object.entries(byDate).map(([k, v]) => ({
-      label: format(parseISO(k), "MMM d"),
-      count: v,
-    }));
-  }, [logs]);
+    const today = new Date();
 
+    return Array.from(
+      { length: 30 },
+      (_, index) => {
+        const date = subDays(
+          today,
+          29 - index
+        );
+
+        const key = getLocalDate(date);
+
+        const count = checkIns.filter(
+          (checkIn) =>
+            checkIn.localDate === key
+        ).length;
+
+        return {
+          label: format(date, "MMM d"),
+          count,
+        };
+      }
+    );
+  }, [checkIns]);
+
+  // =========================
+  // LAST 7 DAYS
+  // =========================
   const weekly = useMemo(() => {
-    const end = new Date();
-    const out = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = subDays(end, i);
-      const key = format(d, "yyyy-MM-dd");
-      const count = logs.filter((l) => l.completedDate === key).length;
-      out.push({ label: format(d, "EEE"), count });
-    }
-    return out;
-  }, [logs]);
+    const today = new Date();
 
+    return Array.from(
+      { length: 7 },
+      (_, index) => {
+        const date = subDays(
+          today,
+          6 - index
+        );
+
+        const key = getLocalDate(date);
+
+        const count = checkIns.filter(
+          (checkIn) =>
+            checkIn.localDate === key
+        ).length;
+
+        return {
+          label: format(date, "EEE"),
+          count,
+        };
+      }
+    );
+  }, [checkIns]);
+
+  // =========================
+  // CATEGORY DATA
+  // =========================
   const categoryData = useMemo(() => {
-    if (!stats) return [];
-    const map = {};
-    for (const h of habits) map[h._id] = h.category;
-    const counts = {};
-    for (const l of logs) {
-      const cat = map[l.habitId];
-      if (!cat) continue;
-      counts[cat] = (counts[cat] || 0) + 1;
+    const categories = {};
+
+    for (const habit of habits) {
+      categories[String(habit._id)] =
+        habit.category;
     }
-    return Object.entries(counts).map(([name, value]) => ({ name, value }));
-  }, [stats, logs, habits]);
 
-  if (loading || !stats) return <LoadingSpinner full />;
+    const counts = {};
 
-  const sortedByStreak = [...stats.perHabit].sort(
-    (a, b) => b.currentStreak - a.currentStreak
+    for (const checkIn of checkIns) {
+      const category =
+        categories[String(checkIn.habit)];
+
+      if (!category) continue;
+
+      counts[category] =
+        (counts[category] || 0) + 1;
+    }
+
+    return Object.entries(counts).map(
+      ([name, value]) => ({
+        name,
+        value,
+      })
+    );
+  }, [habits, checkIns]);
+
+  // =========================
+  // PER-HABIT STATS
+  // =========================
+  const perHabit = useMemo(() => {
+    return habits.map((habit) => {
+      const completions30d =
+        checkIns.filter(
+          (checkIn) =>
+            String(checkIn.habit) ===
+            String(habit._id)
+        ).length;
+
+      const streak =
+        statsByHabit[habit._id] || {};
+
+      return {
+        habitId: habit._id,
+
+        name: habit.name,
+
+        icon: habit.icon || "🎯",
+
+        color:
+          habit.color || "#6366f1",
+
+        category:
+          habit.category || "Other",
+
+        currentStreak:
+          streak.currentStreak || 0,
+
+        longestStreak:
+          streak.longestStreak || 0,
+
+        completions30d,
+      };
+    });
+  }, [
+    habits,
+    checkIns,
+    statsByHabit,
+  ]);
+
+  // =========================
+  // TOP HABITS BY CURRENT STREAK
+  // =========================
+  const sortedByStreak = [
+    ...perHabit,
+  ].sort(
+    (a, b) =>
+      b.currentStreak -
+      a.currentStreak
   );
-  const best = sortedByStreak[0];
-  const sortedByComp = [...stats.perHabit].sort(
-    (a, b) => b.completions30d - a.completions30d
+
+  const best =
+    sortedByStreak[0];
+
+  // =========================
+  // TOP HABITS BY COMPLETIONS
+  // =========================
+  const sortedByComp = [
+    ...perHabit,
+  ].sort(
+    (a, b) =>
+      b.completions30d -
+      a.completions30d
   );
-  const longestLongest = [...stats.perHabit].sort(
-    (a, b) => b.longestStreak - a.longestStreak
+
+  // =========================
+  // LONGEST STREAK
+  // =========================
+  const longestLongest = [
+    ...perHabit,
+  ].sort(
+    (a, b) =>
+      b.longestStreak -
+      a.longestStreak
   )[0];
-  const worst = [...stats.perHabit]
-    .filter((s) => s.completions30d < 30)
-    .sort((a, b) => a.completions30d - b.completions30d)[0];
+
+  // =========================
+  // HABIT NEEDING ATTENTION
+  // =========================
+  const worst = [
+    ...perHabit,
+  ]
+    .filter(
+      (habit) =>
+        habit.completions30d < 30
+    )
+    .sort(
+      (a, b) =>
+        a.completions30d -
+        b.completions30d
+    )[0];
+
+  // =========================
+  // LOADING
+  // =========================
+  if (loading) {
+    return <LoadingSpinner full />;
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
+
+      {/* =========================
+          HEADER
+      ========================= */}
       <div>
         <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
           Statistics
         </h1>
+
         <p className="text-sm text-muted mt-0.5">
           Deep insights from your habit data.
         </p>
       </div>
 
-      {stats.perHabit.length === 0 ? (
+      {/* =========================
+          EMPTY STATE
+      ========================= */}
+      {perHabit.length === 0 ? (
         <div className="card p-10 text-center">
-          <div className="text-5xl mb-3">📊</div>
-          <div className="font-medium">No data yet</div>
+          <div className="text-5xl mb-3">
+            📊
+          </div>
+
+          <div className="font-medium">
+            No data yet
+          </div>
+
           <div className="text-sm text-muted mt-1">
-            Create a habit and check it off a few times to unlock statistics.
+            Create a habit and check it off a
+            few times to unlock statistics.
           </div>
         </div>
       ) : (
         <>
+          {/* =========================
+              SUMMARY CARDS
+          ========================= */}
           <div className="grid md:grid-cols-3 gap-4">
+
+            {/* BEST STREAK */}
             {best && (
               <div className="card p-5">
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                  <Flame size={14} className="text-orange-500" />
+                  <Flame
+                    size={14}
+                    className="text-orange-500"
+                  />
+
                   Best streak
                 </div>
+
                 <div className="mt-2 flex items-center gap-3">
-                  <span className="text-3xl">{best.icon}</span>
+                  <span className="text-3xl">
+                    {best.icon}
+                  </span>
+
                   <div>
                     <div className="font-semibold">
                       {best.name}
                     </div>
+
                     <div className="text-sm text-muted">
                       {best.currentStreak} day
-                      {best.currentStreak === 1 ? "" : "s"} running
+                      {best.currentStreak === 1
+                        ? ""
+                        : "s"}{" "}
+                      running
                     </div>
                   </div>
                 </div>
               </div>
             )}
+
+            {/* LONGEST EVER */}
             {longestLongest && (
               <div className="card p-5">
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                  <Trophy size={14} className="text-amber-500" />
+                  <Trophy
+                    size={14}
+                    className="text-amber-500"
+                  />
+
                   Longest ever
                 </div>
+
                 <div className="mt-2 flex items-center gap-3">
-                  <span className="text-3xl">{longestLongest.icon}</span>
+                  <span className="text-3xl">
+                    {longestLongest.icon}
+                  </span>
+
                   <div>
                     <div className="font-semibold">
                       {longestLongest.name}
                     </div>
+
                     <div className="text-sm text-muted">
-                      {longestLongest.longestStreak} day record
+                      {longestLongest.longestStreak}{" "}
+                      day record
                     </div>
                   </div>
                 </div>
               </div>
             )}
+
+            {/* NEEDS ATTENTION */}
             {worst && (
               <div className="card p-5">
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-rose-600 dark:text-rose-400">
-                  <TrendingDown size={14} className="text-rose-500" />
+                  <TrendingDown
+                    size={14}
+                    className="text-rose-500"
+                  />
+
                   Needs attention
                 </div>
+
                 <div className="mt-2 flex items-center gap-3">
-                  <span className="text-3xl">{worst.icon}</span>
+                  <span className="text-3xl">
+                    {worst.icon}
+                  </span>
+
                   <div>
                     <div className="font-semibold">
                       {worst.name}
                     </div>
+
                     <div className="text-sm text-muted">
-                      {worst.completions30d}/30 in the last 30 days
+                      {worst.completions30d}
+                      /30 in the last 30 days
                     </div>
                   </div>
                 </div>
@@ -181,57 +434,128 @@ export default function Stats() {
             )}
           </div>
 
+          {/* =========================
+              CHARTS
+          ========================= */}
           <div className="grid lg:grid-cols-2 gap-5">
-            <WeeklyBarChart data={weekly} title="Completions — last 7 days" />
-            <MonthlyBarChart data={monthly} />
+
+            <WeeklyBarChart
+              data={weekly}
+              title="Completions — last 7 days"
+            />
+
+            <MonthlyBarChart
+              data={monthly}
+            />
+
           </div>
 
-          <div className="grid lg:grid-cols-[1fr_1fr] gap-5">
-            <CategoryPieChart data={categoryData} />
+          {/* =========================
+              CATEGORY + TOP HABITS
+          ========================= */}
+          <div className="grid lg:grid-cols-2 gap-5">
+
+            {/* CATEGORY PIE */}
+            <CategoryPieChart
+              data={categoryData}
+            />
+
+            {/* TOP HABITS */}
             <div className="card p-5">
+
               <div className="text-sm font-medium mb-3">
-                Top habits by completion (30d)
+                Top habits by completion
+                (30d)
               </div>
+
               <div className="space-y-3">
-                {sortedByComp.slice(0, 5).map((s) => {
-                  const pct = Math.round((s.completions30d / 30) * 100);
-                  return (
-                    <div key={s.habitId}>
-                      <div className="flex items-center justify-between text-sm mb-1">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-lg shrink-0">{s.icon}</span>
-                          <span className="truncate">{s.name}</span>
+
+                {sortedByComp
+                  .slice(0, 5)
+                  .map((habit) => {
+
+                    const pct = Math.min(
+                      100,
+                      Math.round(
+                        (habit.completions30d /
+                          30) *
+                        100
+                      )
+                    );
+
+                    return (
+                      <div
+                        key={habit.habitId}
+                      >
+
+                        <div className="flex items-center justify-between text-sm mb-1">
+
+                          <div className="flex items-center gap-2 min-w-0">
+
+                            <span className="text-lg shrink-0">
+                              {habit.icon}
+                            </span>
+
+                            <span className="truncate">
+                              {habit.name}
+                            </span>
+
+                          </div>
+
+                          <span className="text-muted text-xs">
+                            {habit.completions30d}
+                            /30 · {pct}%
+                          </span>
+
                         </div>
-                        <span className="text-muted text-xs">
-                          {s.completions30d}/30 · {pct}%
-                        </span>
-                      </div>
-                      <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--chip-bg)" }}>
+
                         <div
-                          className="h-full rounded-full transition-all"
+                          className="h-2 rounded-full overflow-hidden"
                           style={{
-                            width: `${pct}%`,
-                            background: s.color,
+                            background:
+                              "var(--chip-bg)",
                           }}
-                        />
+                        >
+
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{
+                              width: `${pct}%`,
+                              background:
+                                habit.color,
+                            }}
+                          />
+
+                        </div>
+
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+
               </div>
+
             </div>
           </div>
 
+          {/* =========================
+              ALL HABITS
+          ========================= */}
           <div className="space-y-2">
-            <div className="text-sm font-medium">All habits</div>
-            {stats.perHabit.map((s) => (
-              <HabitStatsCard key={s.habitId} stat={s} />
+
+            <div className="text-sm font-medium">
+              All habits
+            </div>
+
+            {perHabit.map((stat) => (
+              <HabitStatsCard
+                key={stat.habitId}
+                stat={stat}
+              />
             ))}
+
           </div>
         </>
       )}
-
-      <AIChat />
     </div>
   );
 }
