@@ -270,20 +270,26 @@ export default function Habits() {
           </div>
 
           <select
-            className="input md:w-52"
-            value={category}
-            onChange={(e) =>
-              setCategory(e.target.value)
-            }
-          >
-            <option value="All">
-              All categories
-            </option>
+  className="input md:w-52"
+  value={category}
+  onChange={(e) => setCategory(e.target.value)}
+>
+  <option
+    value="All"
+    className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white"
+  >
+    All categories
+  </option>
 
-            {CATEGORIES.map((c) => (
-              <option key={c}>{c}</option>
-            ))}
-          </select>
+  {CATEGORIES.map((c) => (
+    <option
+      key={c}
+      className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white"
+    >
+      {c}
+    </option>
+  ))}
+</select>
         </div>
       </div>
 
