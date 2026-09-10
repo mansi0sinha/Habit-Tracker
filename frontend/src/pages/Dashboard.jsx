@@ -205,10 +205,10 @@ export default function Dashboard() {
   // ==========================================
   const todayProgress = habits.length
     ? Math.round(
-        (completedToday.size /
-          habits.length) *
-          100
-      )
+      (completedToday.size /
+        habits.length) *
+      100
+    )
     : 0;
 
   // ==========================================
@@ -249,7 +249,7 @@ export default function Dashboard() {
 
     current.setDate(
       current.getDate() +
-        difference
+      difference
     );
 
     for (let i = 0; i < 7; i++) {
@@ -277,7 +277,7 @@ export default function Dashboard() {
       for (const habit of habits) {
         result[habit._id] = (
           checkInsByHabit[
-            habit._id
+          habit._id
           ] || []
         ).filter((date) =>
           weekDates.includes(date)
@@ -306,63 +306,56 @@ export default function Dashboard() {
   const weekRate =
     weekTotal
       ? Math.round(
-          (weekDone /
-            weekTotal) *
-            100
-        )
+        (weekDone /
+          weekTotal) *
+        100
+      )
       : 0;
 
   // ==========================================
   // 90-DAY HEATMAP
   // ==========================================
-  const heatmap =
-    useMemo(() => {
-      const counts = {};
 
-      for (const checkIn of checkIns) {
-        const date =
-          checkIn.localDate;
+  const heatmap = useMemo(() => {
+    const counts = {};
 
-        counts[date] =
-          (counts[date] || 0) + 1;
-      }
+    for (const checkIn of checkIns) {
+      const date = checkIn.localDate;
+      counts[date] = (counts[date] || 0) + 1;
+    }
 
-      const result = [];
+    const result = [];
 
-      const end =
-        new Date(
-          `${today}T00:00:00`
-        );
+    const [year, month, day] = today.split("-").map(Number);
 
-      const start =
-        new Date(end);
+    const end = new Date(year, month - 1, day);
+    const start = new Date(end);
 
-      start.setDate(
-        start.getDate() - 89
-      );
+    start.setDate(start.getDate() - 89);
 
-      const cursor =
-        new Date(start);
+    const formatDate = (date) => {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
 
-      while (cursor <= end) {
-        const date =
-          cursor
-            .toISOString()
-            .slice(0, 10);
+      return `${y}-${m}-${d}`;
+    };
 
-        result.push({
-          date,
-          count:
-            counts[date] || 0,
-        });
+    const cursor = new Date(start);
 
-        cursor.setDate(
-          cursor.getDate() + 1
-        );
-      }
+    while (cursor <= end) {
+      const date = formatDate(cursor);
 
-      return result;
-    }, [checkIns, today]);
+      result.push({
+        date,
+        count: counts[date] || 0,
+      });
+
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    return result;
+  }, [checkIns, today]);
 
   // ==========================================
   // CHECK-IN / UNCHECK
@@ -406,7 +399,7 @@ export default function Dashboard() {
 
       if (
         completedToday.size + 1 ===
-          habits.length &&
+        habits.length &&
         habits.length > 0
       ) {
         setTimeout(() => {
@@ -455,9 +448,9 @@ export default function Dashboard() {
                 String(
                   habit._id
                 ) ===
-                String(
-                  editing._id
-                )
+                  String(
+                    editing._id
+                  )
                   ? updatedHabit
                   : habit
             )
