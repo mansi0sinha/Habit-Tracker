@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { format, subDays } from "date-fns";
-import { Trophy, Flame, TrendingDown } from "lucide-react";
+import { format } from "date-fns";
+import {
+  Trophy,
+  Flame,
+  TrendingDown,
+} from "lucide-react";
 
 import api from "../api/axios.js";
 import HabitStatsCard from "../components/HabitStatsCard.jsx";
@@ -8,18 +12,23 @@ import WeeklyBarChart from "../components/WeeklyBarChart.jsx";
 import MonthlyBarChart from "../components/MonthlyBarChart.jsx";
 import CategoryPieChart from "../components/CategoryPieChart.jsx";
 import LoadingSpinner from "../components/LoadingSpinner.jsx";
-
-const getLocalDate = (date = new Date()) =>
-  new Intl.DateTimeFormat("en-CA", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(date);
+import { useAuth } from "../context/AuthContext.jsx";
+import {
+  todayKey,
+  addDaysToKey,
+} from "../utils/dateHelpers.js";
 
 export default function Stats() {
+  const { user } = useAuth();
+
+  const timezone =
+    user?.timezone ||
+    Intl.DateTimeFormat().resolvedOptions().timeZone;
+
   const [habits, setHabits] = useState([]);
   const [checkIns, setCheckIns] = useState([]);
-  const [statsByHabit, setStatsByHabit] = useState({});
+  const [statsByHabit, setStatsByHabit] =
+    useState({});
   const [loading, setLoading] = useState(true);
 
   // =========================
@@ -30,21 +39,31 @@ export default function Stats() {
       setLoading(true);
 
       try {
-        const end = new Date();
-        const start = subDays(end, 89);
+        const today = todayKey(timezone);
 
-        const [habitsRes, checkInsRes] = await Promise.all([
+        const startDate = addDaysToKey(
+          today,
+          -89
+        );
+
+        const endDate = today;
+
+        const [
+          habitsRes,
+          checkInsRes,
+        ] = await Promise.all([
           api.get("/habits"),
 
           api.get("/habits/checkins", {
             params: {
-              start: getLocalDate(start),
-              end: getLocalDate(end),
+              start: startDate,
+              end: endDate,
             },
           }),
         ]);
 
-        const habitList = habitsRes.data.habits || [];
+        const habitList =
+          habitsRes.data.habits || [];
 
         const checkInList =
           checkInsRes.data.checkIns || [];
@@ -55,42 +74,52 @@ export default function Stats() {
         // =========================
         // LOAD STATS FOR EACH HABIT
         // =========================
-        const entries = await Promise.all(
-          habitList.map(async (habit) => {
-            try {
-              const res = await api.get(
-                `/habits/${habit._id}/stats`
-              );
+        const entries =
+          await Promise.all(
+            habitList.map(
+              async (habit) => {
+                try {
+                  const res =
+                    await api.get(
+                      `/habits/${habit._id}/stats`
+                    );
 
-              return [
-                habit._id,
-                {
-                  currentStreak:
-                    res.data.currentStreak || 0,
+                  return [
+                    habit._id,
+                    {
+                      currentStreak:
+                        res.data
+                          .currentStreak ||
+                        0,
 
-                  longestStreak:
-                    res.data.longestStreak || 0,
-                },
-              ];
-            } catch (error) {
-              console.error(
-                `Failed to load stats for ${habit.name}:`,
-                error
-              );
+                      longestStreak:
+                        res.data
+                          .longestStreak ||
+                        0,
+                    },
+                  ];
+                } catch (error) {
+                  console.error(
+                    `Failed to load stats for ${habit.name}:`,
+                    error
+                  );
 
-              return [
-                habit._id,
-                {
-                  currentStreak: 0,
-                  longestStreak: 0,
-                },
-              ];
-            }
-          })
-        );
+                  return [
+                    habit._id,
+                    {
+                      currentStreak: 0,
+                      longestStreak: 0,
+                    },
+                  ];
+                }
+              }
+            )
+          );
 
         setStatsByHabit(
-          Object.fromEntries(entries)
+          Object.fromEntries(
+            entries
+          )
         );
       } catch (error) {
         console.error(
@@ -103,134 +132,172 @@ export default function Stats() {
     };
 
     load();
-  }, []);
+  }, [timezone]);
 
   // =========================
   // LAST 30 DAYS
   // =========================
   const monthly = useMemo(() => {
-    const today = new Date();
+    const today =
+      todayKey(timezone);
 
     return Array.from(
       { length: 30 },
       (_, index) => {
-        const date = subDays(
-          today,
-          29 - index
+        const key =
+          addDaysToKey(
+            today,
+            -29 + index
+          );
+
+        const date = new Date(
+          `${key}T00:00:00Z`
         );
 
-        const key = getLocalDate(date);
-
-        const count = checkIns.filter(
-          (checkIn) =>
-            checkIn.localDate === key
-        ).length;
+        const count =
+          checkIns.filter(
+            (checkIn) =>
+              checkIn.localDate ===
+              key
+          ).length;
 
         return {
-          label: format(date, "MMM d"),
+          label: format(
+            date,
+            "MMM d"
+          ),
           count,
         };
       }
     );
-  }, [checkIns]);
+  }, [checkIns, timezone]);
 
   // =========================
   // LAST 7 DAYS
   // =========================
   const weekly = useMemo(() => {
-    const today = new Date();
+    const today =
+      todayKey(timezone);
 
     return Array.from(
       { length: 7 },
       (_, index) => {
-        const date = subDays(
-          today,
-          6 - index
+        const key =
+          addDaysToKey(
+            today,
+            -6 + index
+          );
+
+        const date = new Date(
+          `${key}T00:00:00Z`
         );
 
-        const key = getLocalDate(date);
-
-        const count = checkIns.filter(
-          (checkIn) =>
-            checkIn.localDate === key
-        ).length;
+        const count =
+          checkIns.filter(
+            (checkIn) =>
+              checkIn.localDate ===
+              key
+          ).length;
 
         return {
-          label: format(date, "EEE"),
+          label: format(
+            date,
+            "EEE"
+          ),
           count,
         };
       }
     );
-  }, [checkIns]);
+  }, [checkIns, timezone]);
 
   // =========================
   // CATEGORY DATA
   // =========================
-  const categoryData = useMemo(() => {
-    const categories = {};
+  const categoryData =
+    useMemo(() => {
+      const categories = {};
 
-    for (const habit of habits) {
-      categories[String(habit._id)] =
-        habit.category;
-    }
+      for (const habit of habits) {
+        categories[
+          String(habit._id)
+        ] = habit.category;
+      }
 
-    const counts = {};
+      const counts = {};
 
-    for (const checkIn of checkIns) {
-      const category =
-        categories[String(checkIn.habit)];
+      for (const checkIn of checkIns) {
+        const category =
+          categories[
+            String(
+              checkIn.habit
+            )
+          ];
 
-      if (!category) continue;
+        if (!category) continue;
 
-      counts[category] =
-        (counts[category] || 0) + 1;
-    }
+        counts[category] =
+          (counts[category] || 0) +
+          1;
+      }
 
-    return Object.entries(counts).map(
-      ([name, value]) => ({
-        name,
-        value,
-      })
-    );
-  }, [habits, checkIns]);
+      return Object.entries(
+        counts
+      ).map(
+        ([name, value]) => ({
+          name,
+          value,
+        })
+      );
+    }, [habits, checkIns]);
 
   // =========================
   // PER-HABIT STATS
   // =========================
   const perHabit = useMemo(() => {
-    return habits.map((habit) => {
-      const completions30d =
-        checkIns.filter(
-          (checkIn) =>
-            String(checkIn.habit) ===
-            String(habit._id)
-        ).length;
+    return habits.map(
+      (habit) => {
+        const completions30d =
+          checkIns.filter(
+            (checkIn) =>
+              String(
+                checkIn.habit
+              ) ===
+              String(habit._id)
+          ).length;
 
-      const streak =
-        statsByHabit[habit._id] || {};
+        const streak =
+          statsByHabit[
+            habit._id
+          ] || {};
 
-      return {
-        habitId: habit._id,
+        return {
+          habitId: habit._id,
 
-        name: habit.name,
+          name: habit.name,
 
-        icon: habit.icon || "🎯",
+          icon:
+            habit.icon || "🎯",
 
-        color:
-          habit.color || "#6366f1",
+          color:
+            habit.color ||
+            "#6366f1",
 
-        category:
-          habit.category || "Other",
+          category:
+            habit.category ||
+            "Other",
 
-        currentStreak:
-          streak.currentStreak || 0,
+          currentStreak:
+            streak.currentStreak ||
+            0,
 
-        longestStreak:
-          streak.longestStreak || 0,
+          longestStreak:
+            streak.longestStreak ||
+            0,
 
-        completions30d,
-      };
-    });
+          completions30d,
+        };
+      }
+    );
   }, [
     habits,
     checkIns,
@@ -317,6 +384,7 @@ export default function Stats() {
       ========================= */}
       {perHabit.length === 0 ? (
         <div className="card p-10 text-center">
+
           <div className="text-5xl mb-3">
             📊
           </div>
@@ -329,6 +397,7 @@ export default function Stats() {
             Create a habit and check it off a
             few times to unlock statistics.
           </div>
+
         </div>
       ) : (
         <>
@@ -340,7 +409,9 @@ export default function Stats() {
             {/* BEST STREAK */}
             {best && (
               <div className="card p-5">
+
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+
                   <Flame
                     size={14}
                     className="text-orange-500"
@@ -350,11 +421,13 @@ export default function Stats() {
                 </div>
 
                 <div className="mt-2 flex items-center gap-3">
+
                   <span className="text-3xl">
                     {best.icon}
                   </span>
 
                   <div>
+
                     <div className="font-semibold">
                       {best.name}
                     </div>
@@ -366,15 +439,20 @@ export default function Stats() {
                         : "s"}{" "}
                       running
                     </div>
+
                   </div>
+
                 </div>
+
               </div>
             )}
 
             {/* LONGEST EVER */}
             {longestLongest && (
               <div className="card p-5">
+
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+
                   <Trophy
                     size={14}
                     className="text-amber-500"
@@ -384,11 +462,13 @@ export default function Stats() {
                 </div>
 
                 <div className="mt-2 flex items-center gap-3">
+
                   <span className="text-3xl">
                     {longestLongest.icon}
                   </span>
 
                   <div>
+
                     <div className="font-semibold">
                       {longestLongest.name}
                     </div>
@@ -397,15 +477,20 @@ export default function Stats() {
                       {longestLongest.longestStreak}{" "}
                       day record
                     </div>
+
                   </div>
+
                 </div>
+
               </div>
             )}
 
             {/* NEEDS ATTENTION */}
             {worst && (
               <div className="card p-5">
+
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-rose-600 dark:text-rose-400">
+
                   <TrendingDown
                     size={14}
                     className="text-rose-500"
@@ -415,11 +500,13 @@ export default function Stats() {
                 </div>
 
                 <div className="mt-2 flex items-center gap-3">
+
                   <span className="text-3xl">
                     {worst.icon}
                   </span>
 
                   <div>
+
                     <div className="font-semibold">
                       {worst.name}
                     </div>
@@ -428,10 +515,14 @@ export default function Stats() {
                       {worst.completions30d}
                       /30 in the last 30 days
                     </div>
+
                   </div>
+
                 </div>
+
               </div>
             )}
+
           </div>
 
           {/* =========================
@@ -474,18 +565,21 @@ export default function Stats() {
                   .slice(0, 5)
                   .map((habit) => {
 
-                    const pct = Math.min(
-                      100,
-                      Math.round(
-                        (habit.completions30d /
-                          30) *
-                        100
-                      )
-                    );
+                    const pct =
+                      Math.min(
+                        100,
+                        Math.round(
+                          (habit.completions30d /
+                            30) *
+                            100
+                        )
+                      );
 
                     return (
                       <div
-                        key={habit.habitId}
+                        key={
+                          habit.habitId
+                        }
                       >
 
                         <div className="flex items-center justify-between text-sm mb-1">
@@ -546,16 +640,21 @@ export default function Stats() {
               All habits
             </div>
 
-            {perHabit.map((stat) => (
-              <HabitStatsCard
-                key={stat.habitId}
-                stat={stat}
-              />
-            ))}
+            {perHabit.map(
+              (stat) => (
+                <HabitStatsCard
+                  key={
+                    stat.habitId
+                  }
+                  stat={stat}
+                />
+              )
+            )}
 
           </div>
         </>
       )}
+
     </div>
   );
 }

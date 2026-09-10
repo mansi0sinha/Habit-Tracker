@@ -4,40 +4,41 @@ import {
   ChevronRight,
   CalendarDays,
 } from "lucide-react";
-import {
-  format,
-  addWeeks,
-  isSameWeek,
-} from "date-fns";
+import { format, addWeeks } from "date-fns";
 
 import api from "../api/axios.js";
 import WeeklyGrid from "../components/WeeklyGrid.jsx";
 import LoadingSpinner from "../components/LoadingSpinner.jsx";
-import { weekKeysFor } from "../utils/dateHelpers.js";
-
-const getLocalDate = (date = new Date()) =>
-  new Intl.DateTimeFormat("en-CA", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(date);
+import { weekKeysFor, todayKey } from "../utils/dateHelpers.js";
+import { useAuth } from "../context/AuthContext.jsx";
 
 export default function Weekly() {
+  const { user } = useAuth();
+
+  const timezone =
+    user?.timezone ||
+    Intl.DateTimeFormat().resolvedOptions().timeZone;
+
   const [cursor, setCursor] = useState(new Date());
   const [habits, setHabits] = useState([]);
   const [checkIns, setCheckIns] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // =========================
+  // CURRENT WEEK
+  // =========================
   const days = useMemo(
-    () => weekKeysFor(cursor),
-    [cursor]
+    () => weekKeysFor(cursor, timezone),
+    [cursor, timezone]
   );
 
-  const isCurrentWeek = isSameWeek(
-    cursor,
-    new Date(),
-    { weekStartsOn: 1 }
+  const currentWeekDays = useMemo(
+    () => weekKeysFor(new Date(), timezone),
+    [timezone]
   );
+
+  const isCurrentWeek =
+    days[0]?.key === currentWeekDays[0]?.key;
 
   // =========================
   // LOAD DATA
@@ -70,7 +71,7 @@ export default function Weekly() {
 
         setHabits(habitList);
         setCheckIns(checkInList);
-       
+
       } catch (error) {
         console.error(
           "Failed to load weekly data:",
@@ -121,8 +122,8 @@ export default function Weekly() {
 
   const weekRate = totalSlots
     ? Math.round(
-      (totalDone / totalSlots) * 100
-    )
+        (totalDone / totalSlots) * 100
+      )
     : 0;
 
   // =========================
@@ -152,7 +153,7 @@ export default function Weekly() {
 
       count: (
         logsByHabit[
-        String(habit._id)
+          String(habit._id)
         ] || []
       ).length,
     }))

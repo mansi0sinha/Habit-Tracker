@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  Sparkles,
-  RefreshCw,
   Trophy,
   CalendarRange,
   Activity,
@@ -22,11 +20,16 @@ import {
   Cell,
   Legend,
 } from "recharts";
-import { format, subDays } from "date-fns";
+import { format } from "date-fns";
 
 import api from "../api/axios.js";
 import LoadingSpinner from "../components/LoadingSpinner.jsx";
 import { useTheme } from "../context/ThemeContext.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
+import {
+  todayKey,
+  addDaysToKey,
+} from "../utils/dateHelpers.js";
 
 const PIE_COLORS = [
   "#f59e0b",
@@ -40,15 +43,13 @@ const PIE_COLORS = [
   "#14b8a6",
 ];
 
-const getLocalDate = (date = new Date()) =>
-  new Intl.DateTimeFormat("en-CA", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(date);
-
 export default function Insights() {
   const { theme } = useTheme();
+  const { user } = useAuth();
+
+  const timezone =
+    user?.timezone ||
+    Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   const isDark = theme === "dark";
 
@@ -81,15 +82,19 @@ export default function Insights() {
       setLoading(true);
 
       try {
-        const end = new Date();
-        const start = subDays(end, 13);
+        const today = todayKey(timezone);
 
-        const startDate = getLocalDate(start);
-        const endDate = getLocalDate(end);
+        const startDate = addDaysToKey(
+          today,
+          -13
+        );
+
+        const endDate = today;
 
         const [habitsRes, checkInsRes] =
           await Promise.all([
             api.get("/habits"),
+
             api.get("/habits/checkins", {
               params: {
                 start: startDate,
@@ -119,6 +124,7 @@ export default function Insights() {
                 {
                   currentStreak:
                     res.data.currentStreak || 0,
+
                   longestStreak:
                     res.data.longestStreak || 0,
                 },
@@ -149,41 +155,66 @@ export default function Insights() {
     };
 
     load();
-  }, []);
+  }, [timezone]);
 
   // =========================
   // DATE RANGES
   // =========================
-  const today = new Date();
 
   const thisWeekDates = useMemo(() => {
-    return Array.from({ length: 7 }, (_, i) => {
-      const date = subDays(today, 6 - i);
+    const today = todayKey(timezone);
 
-      return {
-        date,
-        key: getLocalDate(date),
-        label: format(date, "EEE"),
-      };
-    });
-  }, []);
+    return Array.from(
+      { length: 7 },
+      (_, index) => {
+        const key = addDaysToKey(
+          today,
+          -6 + index
+        );
+
+        const date = new Date(
+          `${key}T00:00:00Z`
+        );
+
+        return {
+          date,
+          key,
+          label: format(date, "EEE"),
+        };
+      }
+    );
+  }, [timezone]);
 
   const lastWeekDates = useMemo(() => {
-    return Array.from({ length: 7 }, (_, i) => {
-      const date = subDays(today, 13 - i);
+    const today = todayKey(timezone);
 
-      return {
-        date,
-        key: getLocalDate(date),
-        label: format(date, "EEE"),
-      };
-    });
-  }, []);
+    return Array.from(
+      { length: 7 },
+      (_, index) => {
+        const key = addDaysToKey(
+          today,
+          -13 + index
+        );
+
+        const date = new Date(
+          `${key}T00:00:00Z`
+        );
+
+        return {
+          date,
+          key,
+          label: format(date, "EEE"),
+        };
+      }
+    );
+  }, [timezone]);
 
   const thisWeekKeys = useMemo(
     () =>
       new Set(
-        thisWeekDates.map((d) => d.key)
+        thisWeekDates.map(
+          (d) => d.key
+        )
       ),
     [thisWeekDates]
   );
@@ -191,10 +222,13 @@ export default function Insights() {
   // =========================
   // WEEK DATA
   // =========================
+
   const thisWeekLogs = useMemo(
     () =>
       checkIns.filter((c) =>
-        thisWeekKeys.has(c.localDate)
+        thisWeekKeys.has(
+          c.localDate
+        )
       ),
     [checkIns, thisWeekKeys]
   );
@@ -202,31 +236,42 @@ export default function Insights() {
   const lastWeekLogs = useMemo(
     () =>
       checkIns.filter(
-        (c) => !thisWeekKeys.has(c.localDate)
+        (c) =>
+          !thisWeekKeys.has(
+            c.localDate
+          )
       ),
     [checkIns, thisWeekKeys]
   );
 
-  const totalDone = thisWeekLogs.length;
+  const totalDone =
+    thisWeekLogs.length;
 
-  const totalLast = lastWeekLogs.length;
+  const totalLast =
+    lastWeekLogs.length;
 
-  const totalSlots = habits.length * 7;
+  const totalSlots =
+    habits.length * 7;
 
-  const completionRate = totalSlots
-    ? Math.min(
-        100,
-        Math.round(
-          (totalDone / totalSlots) * 100
+  const completionRate =
+    totalSlots
+      ? Math.min(
+          100,
+          Math.round(
+            (totalDone /
+              totalSlots) *
+              100
+          )
         )
-      )
-    : 0;
+      : 0;
 
-  const delta = totalDone - totalLast;
+  const delta =
+    totalDone - totalLast;
 
   const deltaPct = totalLast
     ? Math.round(
-        ((totalDone - totalLast) /
+        ((totalDone -
+          totalLast) /
           totalLast) *
           100
       )
@@ -237,55 +282,70 @@ export default function Insights() {
   // =========================
   // DAILY CHART
   // =========================
-  const dailyData = thisWeekDates.map(
-    (day) => ({
-      label: day.label,
-      count: thisWeekLogs.filter(
-        (c) => c.localDate === day.key
-      ).length,
-    })
-  );
+
+  const dailyData =
+    thisWeekDates.map(
+      (day) => ({
+        label: day.label,
+
+        count:
+          thisWeekLogs.filter(
+            (c) =>
+              c.localDate ===
+              day.key
+          ).length,
+      })
+    );
 
   // =========================
   // WEEK COMPARISON
   // =========================
-  const compareData = thisWeekDates.map(
-    (day, index) => {
-      const thisCount =
-        thisWeekLogs.filter(
-          (c) => c.localDate === day.key
-        ).length;
 
-      const lastCount =
-        lastWeekLogs.filter(
-          (c) =>
-            c.localDate ===
-            lastWeekDates[index].key
-        ).length;
+  const compareData =
+    thisWeekDates.map(
+      (day, index) => {
+        const thisCount =
+          thisWeekLogs.filter(
+            (c) =>
+              c.localDate ===
+              day.key
+          ).length;
 
-      return {
-        label: day.label,
-        "This week": thisCount,
-        "Last week": lastCount,
-      };
-    }
-  );
+        const lastCount =
+          lastWeekLogs.filter(
+            (c) =>
+              c.localDate ===
+              lastWeekDates[index]
+                .key
+          ).length;
 
-  const bestDay = [...dailyData].sort(
-    (a, b) => b.count - a.count
-  )[0];
+        return {
+          label: day.label,
+          "This week": thisCount,
+          "Last week": lastCount,
+        };
+      }
+    );
+
+  const bestDay =
+    [...dailyData].sort(
+      (a, b) =>
+        b.count - a.count
+    )[0];
 
   // =========================
   // HABIT PERFORMANCE
   // =========================
+
   const perHabit = useMemo(() => {
     return habits
       .map((habit) => {
-        const done = thisWeekLogs.filter(
-          (c) =>
-            String(c.habit) ===
-            String(habit._id)
-        ).length;
+        const done =
+          thisWeekLogs.filter(
+            (c) =>
+              String(c.habit) ===
+              String(habit._id)
+          ).length;
 
         const target =
           habit.targetDays || 7;
@@ -294,64 +354,91 @@ export default function Insights() {
           habit,
           done,
           target,
+
           pct: Math.min(
             100,
             Math.round(
               (done /
-                Math.max(1, target)) *
+                Math.max(
+                  1,
+                  target
+                )) *
                 100
             )
           ),
         };
       })
-      .sort((a, b) => b.pct - a.pct);
+      .sort(
+        (a, b) =>
+          b.pct - a.pct
+      );
   }, [habits, thisWeekLogs]);
 
-  const topHabit = perHabit[0];
+  const topHabit =
+    perHabit[0];
 
   // =========================
   // CATEGORY DATA
   // =========================
-  const categoryData = useMemo(() => {
-    const habitCategory = {};
 
-    for (const habit of habits) {
-      habitCategory[String(habit._id)] =
-        habit.category;
-    }
+  const categoryData =
+    useMemo(() => {
+      const habitCategory = {};
 
-    const counts = {};
+      for (const habit of habits) {
+        habitCategory[
+          String(habit._id)
+        ] = habit.category;
+      }
 
-    for (const checkIn of thisWeekLogs) {
-      const category =
-        habitCategory[String(checkIn.habit)];
+      const counts = {};
 
-      if (!category) continue;
+      for (const checkIn of thisWeekLogs) {
+        const category =
+          habitCategory[
+            String(
+              checkIn.habit
+            )
+          ];
 
-      counts[category] =
-        (counts[category] || 0) + 1;
-    }
+        if (!category) continue;
 
-    return Object.entries(counts).map(
-      ([name, value]) => ({
-        name,
-        value,
-      })
-    );
-  }, [habits, thisWeekLogs]);
+        counts[category] =
+          (counts[category] || 0) +
+          1;
+      }
+
+      return Object.entries(
+        counts
+      ).map(
+        ([name, value]) => ({
+          name,
+          value,
+        })
+      );
+    }, [habits, thisWeekLogs]);
 
   // =========================
   // STREAK BOARD
   // =========================
-  const activeStreaks = habits.filter(
-    (habit) =>
-      (statsByHabit[habit._id]
-        ?.currentStreak || 0) > 0
-  ).length;
+
+  const activeStreaks =
+    habits.filter(
+      (habit) =>
+        (
+          statsByHabit[
+            habit._id
+          ]?.currentStreak || 0
+        ) > 0
+    ).length;
 
   if (loading) {
     return <LoadingSpinner full />;
   }
+
+  // =========================
+  // DELTA PILL
+  // =========================
 
   const DeltaPill = () => {
     const Icon =
@@ -371,8 +458,14 @@ export default function Insights() {
     const label =
       delta === 0
         ? "no change"
-        : `${delta > 0 ? "+" : ""}${delta} (${
-            deltaPct > 0 ? "+" : ""
+        : `${
+            delta > 0
+              ? "+"
+              : ""
+          }${delta} (${
+            deltaPct > 0
+              ? "+"
+              : ""
           }${deltaPct}%)`;
 
     return (
@@ -380,6 +473,7 @@ export default function Insights() {
         className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${color}`}
       >
         <Icon size={12} />
+
         {label}
       </span>
     );
@@ -387,6 +481,7 @@ export default function Insights() {
 
   return (
     <div className="space-y-6 animate-fade-in">
+
       {/* HEADER */}
       <div>
         <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
@@ -410,6 +505,7 @@ export default function Insights() {
 
       {/* SUMMARY */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+
         <div className="card p-4">
           <div className="flex items-center gap-2 text-xs font-medium text-muted">
             <Activity size={14} />
@@ -497,18 +593,26 @@ export default function Insights() {
               : "no completions"}
           </div>
         </div>
+
       </div>
 
       {/* CHARTS */}
       <div className="grid lg:grid-cols-2 gap-5">
+
         <div className="card p-5">
           <div className="text-sm font-medium mb-3">
             Completions by day
           </div>
 
-          <div style={{ width: "100%", height: 240 }}>
+          <div
+            style={{
+              width: "100%",
+              height: 240,
+            }}
+          >
             <ResponsiveContainer>
               <BarChart data={dailyData}>
+
                 <CartesianGrid
                   strokeDasharray="3 3"
                   stroke={grid}
@@ -535,14 +639,22 @@ export default function Insights() {
                 />
 
                 <Tooltip
-                  contentStyle={tooltipStyle}
+                  contentStyle={
+                    tooltipStyle
+                  }
                 />
 
                 <Bar
                   dataKey="count"
                   fill="#f59e0b"
-                  radius={[6, 6, 0, 0]}
+                  radius={[
+                    6,
+                    6,
+                    0,
+                    0,
+                  ]}
                 />
+
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -553,9 +665,15 @@ export default function Insights() {
             This week vs last week
           </div>
 
-          <div style={{ width: "100%", height: 240 }}>
+          <div
+            style={{
+              width: "100%",
+              height: 240,
+            }}
+          >
             <ResponsiveContainer>
               <BarChart data={compareData}>
+
                 <CartesianGrid
                   strokeDasharray="3 3"
                   stroke={grid}
@@ -582,7 +700,9 @@ export default function Insights() {
                 />
 
                 <Tooltip
-                  contentStyle={tooltipStyle}
+                  contentStyle={
+                    tooltipStyle
+                  }
                 />
 
                 <Legend />
@@ -590,22 +710,35 @@ export default function Insights() {
                 <Bar
                   dataKey="Last week"
                   fill="#cbd5e1"
-                  radius={[4, 4, 0, 0]}
+                  radius={[
+                    4,
+                    4,
+                    0,
+                    0,
+                  ]}
                 />
 
                 <Bar
                   dataKey="This week"
                   fill="#f59e0b"
-                  radius={[4, 4, 0, 0]}
+                  radius={[
+                    4,
+                    4,
+                    0,
+                    0,
+                  ]}
                 />
+
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
+
       </div>
 
       {/* CATEGORY + HABIT PERFORMANCE */}
       <div className="grid lg:grid-cols-[1fr_1.4fr] gap-5">
+
         <div className="card p-5">
           <div className="text-sm font-medium mb-3">
             By category
@@ -616,9 +749,15 @@ export default function Insights() {
               No completions yet this week.
             </div>
           ) : (
-            <div style={{ width: "100%", height: 240 }}>
+            <div
+              style={{
+                width: "100%",
+                height: 240,
+              }}
+            >
               <ResponsiveContainer>
                 <PieChart>
+
                   <Pie
                     data={categoryData}
                     dataKey="value"
@@ -649,6 +788,7 @@ export default function Insights() {
                   />
 
                   <Legend />
+
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -656,7 +796,9 @@ export default function Insights() {
         </div>
 
         <div className="card p-5">
+
           <div className="flex items-center justify-between mb-3">
+
             <div className="text-sm font-medium">
               Habit performance
             </div>
@@ -664,6 +806,7 @@ export default function Insights() {
             <div className="text-xs text-muted">
               vs target this week
             </div>
+
           </div>
 
           {!perHabit.length ? (
@@ -672,6 +815,7 @@ export default function Insights() {
             </div>
           ) : (
             <div className="space-y-3">
+
               {perHabit.map(
                 ({
                   habit,
@@ -679,9 +823,14 @@ export default function Insights() {
                   target,
                   pct,
                 }) => (
-                  <div key={habit._id}>
+                  <div
+                    key={habit._id}
+                  >
+
                     <div className="flex items-center justify-between text-sm mb-1">
+
                       <div className="flex items-center gap-2 min-w-0">
+
                         <span className="text-lg shrink-0">
                           {habit.icon}
                         </span>
@@ -689,11 +838,13 @@ export default function Insights() {
                         <span className="truncate">
                           {habit.name}
                         </span>
+
                       </div>
 
                       <span className="text-muted text-xs">
                         {done}/{target} · {pct}%
                       </span>
+
                     </div>
 
                     <div
@@ -703,6 +854,7 @@ export default function Insights() {
                           "var(--chip-bg)",
                       }}
                     >
+
                       <div
                         className="h-full rounded-full transition-all"
                         style={{
@@ -712,19 +864,26 @@ export default function Insights() {
                             "#6366f1",
                         }}
                       />
+
                     </div>
+
                   </div>
                 )
               )}
+
             </div>
           )}
+
         </div>
+
       </div>
 
       {/* STREAKS */}
       {habits.length > 0 && (
         <div className="card p-5">
+
           <div className="flex items-center justify-between mb-3">
+
             <div className="text-sm font-medium">
               Active streaks
             </div>
@@ -733,19 +892,23 @@ export default function Insights() {
               {activeStreaks} of{" "}
               {habits.length}
             </div>
+
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+
             {habits.map((habit) => {
               const current =
-                statsByHabit[habit._id]
-                  ?.currentStreak || 0;
+                statsByHabit[
+                  habit._id
+                ]?.currentStreak || 0;
 
               return (
                 <div
                   key={habit._id}
                   className="rounded-xl glass p-3 flex items-center gap-3"
                 >
+
                   <span
                     className="w-9 h-9 rounded-lg flex items-center justify-center text-lg shrink-0"
                     style={{
@@ -753,15 +916,18 @@ export default function Insights() {
                         habit.color ||
                         "#6366f1"
                       }26`,
+
                       color:
                         habit.color ||
                         "#6366f1",
                     }}
                   >
-                    {habit.icon || "🎯"}
+                    {habit.icon ||
+                      "🎯"}
                   </span>
 
                   <div className="min-w-0 flex-1">
+
                     <div className="text-sm truncate">
                       {habit.name}
                     </div>
@@ -778,13 +944,18 @@ export default function Insights() {
                         ? ""
                         : "s"}
                     </div>
+
                   </div>
+
                 </div>
               );
             })}
+
           </div>
+
         </div>
       )}
+
     </div>
   );
 }
