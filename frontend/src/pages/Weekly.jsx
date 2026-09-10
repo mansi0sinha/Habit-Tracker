@@ -70,16 +70,7 @@ export default function Weekly() {
 
         setHabits(habitList);
         setCheckIns(checkInList);
-
-        console.log(
-          "WEEKLY HABITS:",
-          habitList
-        );
-
-        console.log(
-          "WEEKLY CHECK-INS:",
-          checkInList
-        );
+       
       } catch (error) {
         console.error(
           "Failed to load weekly data:",
