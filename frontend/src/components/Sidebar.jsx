@@ -23,13 +23,13 @@ const nav = [
   { to: "/weekly", label: "Weekly", icon: CalendarDays },
   { to: "/insights", label: "Insights", icon: Brain },
   { to: "/stats", label: "Statistics", icon: BarChart3 },
+  { to: "/ai-coach", label: "AI Coach", icon: Sparkles },
 ];
 
 export default function Sidebar() {
   const { user, logout, updateUser } = useAuth();
   const { theme, toggle } = useTheme();
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [morning, setMorning] = useState(user?.morningMotivation || false);
   const [name, setName] = useState(user?.name || "");
   const [saving, setSaving] = useState(false);
 
@@ -38,7 +38,6 @@ export default function Sidebar() {
     try {
       const res = await api.put("/auth/profile", {
         name,
-        morningMotivation: morning,
       });
       updateUser(res.data.user);
       setSettingsOpen(false);
@@ -54,7 +53,7 @@ export default function Sidebar() {
           <div className="w-9 h-9 rounded-xl bg-linear-to-br from-brand-500 to-brand-700 text-white flex items-center justify-center shadow-lg shadow-brand-500/30">
             <Sparkles size={18} />
           </div>
-          <div className="font-semibold text-lg tracking-tight">AI Habit Tracker</div>
+          <div className="font-semibold text-lg tracking-tight">Habit Tracker</div>
         </div>
       </div>
 
@@ -126,21 +125,7 @@ export default function Sidebar() {
             />
           </div>
 
-          <label className="flex items-start gap-3 p-3 rounded-xl glass cursor-pointer hover:bg-(--surface-hover)">
-            <input
-              type="checkbox"
-              checked={morning}
-              onChange={(e) => setMorning(e.target.checked)}
-              className="mt-1 accent-brand-600"
-            />
-            <div>
-              <div className="text-sm font-medium">Morning motivation</div>
-              <div className="text-xs text-faint">
-                Show a short personalised AI message every morning on the
-                dashboard.
-              </div>
-            </div>
-          </label>
+          
 
           <div className="flex justify-end gap-2 pt-2">
             <button

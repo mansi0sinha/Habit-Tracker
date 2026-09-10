@@ -4,7 +4,7 @@ import cors from "cors";
 
 import authRouter from "./routes/auth.routes.js";
 import habitRouter from "./routes/habit.routes.js";
-
+import aiRoutes from "./routes/ai.routes.js";
 dotenv.config();
 
 const app = express();
@@ -21,5 +21,5 @@ const port = process.env.PORT || 3000;
 
 app.use("/api/auth", authRouter);
 app.use("/api/habits", habitRouter);
-
+app.use("/api/ai", aiRoutes);
 export { app, port };

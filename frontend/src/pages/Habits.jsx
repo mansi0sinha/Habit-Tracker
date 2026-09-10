@@ -12,7 +12,6 @@ import {
 import api from "../api/axios.js";
 import Modal from "../components/Modal.jsx";
 import HabitForm from "../components/HabitForm.jsx";
-import HabitSuggestionModal from "../components/HabitSuggestionModal.jsx";
 import LoadingSpinner from "../components/LoadingSpinner.jsx";
 import { CATEGORIES } from "../utils/constants.js";
 
@@ -511,16 +510,7 @@ export default function Habits() {
         </div>
       </Modal>
 
-      {/* =========================
-          SUGGESTION MODAL
-      ========================= */}
-      <HabitSuggestionModal
-        open={suggestOpen}
-        onClose={() =>
-          setSuggestOpen(false)
-        }
-        onAccept={acceptSuggestion}
-      />
+     
     </div>
   );
 }
