@@ -61,7 +61,13 @@ export default function HabitForm({ initial, onSubmit, onCancel, submitting }) {
             onChange={set("category")}
           >
             {CATEGORIES.map((c) => (
-              <option key={c}>{c}</option>
+              <option
+                key={c}
+                value={c}
+                className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white"
+              >
+                {c}
+              </option>
             ))}
           </select>
         </div>
