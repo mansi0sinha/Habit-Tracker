@@ -20,39 +20,39 @@ The application is built with a React frontend, Node.js/Express backend, MongoDB
 
 ---
 
-## 🖥️ Application Screenshots
+## 🖥️ Application screenshots
 
 ### 🏠 Landing Page
 
-![Habit Tracker Landing Page](./SCREENSHOTS/landingPage.png)
+![Habit Tracker Landing Page](./screenshots/landingPage.png)
 
 ### 🔐 Login Page
 
-![Login Page](./SCREENSHOTS/loginPage.png)
+![Login Page](./screenshots/loginPage.png)
 
 ### 📊 Dashboard
 
-![Dashboard](./SCREENSHOTS/dashboard.png)
+![Dashboard](./screenshots/dashboard.png)
 
 ### ➕ Create Habit
 
-![Create Habit](./SCREENSHOTS/CreateHabit.png)
+![Create Habit](./screenshots/CreateHabit.png)
 
 ### 📈 Insights
 
-![Insights](./SCREENSHOTS/insights.png)
+![Insights](./screenshots/insights.png)
 
 ### 📊 Statistics
 
-![Statistics](./SCREENSHOTS/Stats.png)
+![Statistics](./screenshots/Stats.png)
 
 ### 📅 Weekly Progress
 
-![Weekly Progress](./SCREENSHOTS/Weekly.png)
+![Weekly Progress](./screenshots/Weekly.png)
 
 ### 📉 Habit Statistics
 
-![Habit Statistics](./SCREENSHOTS/stat.png)
+![Habit Statistics](./screenshots/stat.png)
 
 ---
 
