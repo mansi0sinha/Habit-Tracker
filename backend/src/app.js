@@ -18,7 +18,9 @@ app.use(
 app.use(express.json());
 
 const port = process.env.PORT || 3000;
-
+app.get("/api/health", (req, res) => {
+  res.send("Habit Tracker API is running");
+});
 app.use("/api/auth", authRouter);
 app.use("/api/habits", habitRouter);
 app.use("/api/ai", aiRoutes);
