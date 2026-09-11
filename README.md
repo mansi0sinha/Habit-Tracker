@@ -20,6 +20,42 @@ The application is built with a React frontend, Node.js/Express backend, MongoDB
 
 ---
 
+## 🖥️ Application Screenshots
+
+### 🏠 Landing Page
+
+![Habit Tracker Landing Page](./SCREENSHOTS/landingPage.png)
+
+### 🔐 Login Page
+
+![Login Page](./SCREENSHOTS/loginPage.png)
+
+### 📊 Dashboard
+
+![Dashboard](./SCREENSHOTS/dashboard.png)
+
+### ➕ Create Habit
+
+![Create Habit](./SCREENSHOTS/CreateHabit.png)
+
+### 📈 Insights
+
+![Insights](./SCREENSHOTS/insights.png)
+
+### 📊 Statistics
+
+![Statistics](./SCREENSHOTS/Stats.png)
+
+### 📅 Weekly Progress
+
+![Weekly Progress](./SCREENSHOTS/Weekly.png)
+
+### 📉 Habit Statistics
+
+![Habit Statistics](./SCREENSHOTS/stat.png)
+
+---
+
 ## 🚀 Features
 
 ### 🔐 User Authentication
@@ -742,7 +778,7 @@ Possible future improvements include:
 
 Try the deployed application:
 
-**https://habit-tracker-self-70fe.vercel.app**
+[**https://habit-tracker-self-70fe.vercel.app**](https://habit-tracker-self-70fe.vercel.app)
 
 ---
 
@@ -750,7 +786,7 @@ Try the deployed application:
 
 **Mansi Sinha**
 
-GitHub: **https://github.com/mansi0sinha/Habit-Tracker**
+GitHub: https://github.com/mansi0sinha/Habit-Tracker
 
 ---
 
