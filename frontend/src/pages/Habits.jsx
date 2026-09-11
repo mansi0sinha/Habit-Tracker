@@ -27,7 +27,6 @@ export default function Habits() {
   const [editing, setEditing] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const [suggestOpen, setSuggestOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   // =========================
@@ -171,36 +170,6 @@ export default function Habits() {
     }
   };
 
-  // =========================
-  // ACCEPT AI SUGGESTION
-  // =========================
-  const acceptSuggestion = async (suggestion) => {
-    try {
-      await api.post("/habits", {
-        name: suggestion.name,
-        description: suggestion.description || "",
-        category: suggestion.category || "Health",
-        frequency: suggestion.frequency || "daily",
-        icon: suggestion.icon || "🎯",
-        targetDays:
-          suggestion.frequency === "daily" ? 7 : 3,
-      });
-
-      await load();
-
-      setSuggestOpen(false);
-    } catch (error) {
-      console.error(
-        "Failed to create suggested habit:",
-        error
-      );
-
-      alert(
-        error.response?.data?.message ||
-          "Failed to create habit"
-      );
-    }
-  };
 
   if (loading) {
     return <LoadingSpinner full />;
@@ -223,16 +192,7 @@ export default function Habits() {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            className="btn-secondary"
-            onClick={() => setSuggestOpen(true)}
-          >
-            <Sparkles size={14} />
-
-            <span className="hidden sm:inline">
-              Suggest
-            </span>
-          </button>
+         
 
           <button
             className="btn-primary"
